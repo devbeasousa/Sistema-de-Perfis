@@ -306,18 +306,40 @@ app.post("/perfil",(req,res)=>{
     res.status(201).send(novoPerfil)
 })
 
-app.patch("/perfil/:id",(req,res)=>{
-    edit_perfil = req.body
-    const {id} = req.params
-    const indice = id -1
-    const perfil = perfilService.buscarPerfil(id)
-    if(perfil == null){
+app.patch('/perfil/:id', (req, res)=>{
+    const { id } = req.params
+    const perfilEditado = req.body
+    const index = id - 1
+
+    let perfil = perfilService.buscarPerfil(id)
+    const backup = perfilService.buscarPerfil(id)
+
+    if(!perfil){
         res.status(400).send(erro_mensagem['erro.perfil.naoencontrado'])
         return
     }
+
+    if (!perfilService.validarPerfil(perfilEditado)){
+        res.status(400).send(erro_mensagem['erro.camposorbigatorios.naopreenchidos'])
+        return
+    }
+    perfilService.alterarPerfil(index, perfilEditado, perfil)
+
+    const usuario = usuariosService.buscarUsuario(perfil.id_usuario)
     
-    perfilService.alterarPerfil(indice, perfil, edit_perfil)
-    res.status(200).send(perfilService.perfis[indice])
+    if (!usuario){
+        res.status(400).send(erro_mensagem['erro.usuario.naoencontrado'])
+        perfilService.alterarPerfilErroUsuario(index, backup, perfil)
+    }
+    
+    const empresa = empresaService.buscarEmpresa(perfil.id_empresa)
+    
+    if(!empresa){
+        res.status(400).send(erro_mensagem['erro.empresa.naoencontrada'])
+        perfilService.alterarPerfilErroEmpresa(index, backup, perfil)
+    }
+    
+    res.status(200).send(perfil)
 })
 
 app.delete("/perfil/:id",(req,res)=>{
