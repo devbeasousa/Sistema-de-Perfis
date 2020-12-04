@@ -13,7 +13,10 @@ module.exports = class UsuarioService {
     }
 
     validarUsuario(usuario){
-        return ("nomeCompleto" in usuario && "username" in usuario && "email" in usuario)
+        if (("nomeCompleto" in usuario && "username" in usuario && "email" in usuario) && (usuario.nomeCompleto != "" && usuario.username != "" && usuario.email != "")){
+            return true
+        }
+        return false
     }
 
     inserirUsuario(novoUsuario){

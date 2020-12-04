@@ -8,7 +8,16 @@ const Perfil = require("./Models/Perfil")
 const PerfilService = require("./Controllers/PerfilService")
 const erro_mensagem = require("./Erros")
 const app = express()
+const cors = require('cors')
 app.use(express.json())
+app.use((req, res, next) => {
+    //Qual site tem permissão de realizar a conexão, "*" indicando que qualquer site pode fazer a conexão
+    res.header("Access-Control-Allow-Origin", "*");
+	//Quais são os métodos que a conexão pode realizar na API
+    res.header("Access-Control-Allow-Methods", 'GET,PUT,POST,DELETE');
+    app.use(cors());
+    next();
+});
 
 //Iniciando os Serviços
 const empresaService = new EmpresaService()
@@ -28,8 +37,18 @@ usuariosService.inserirUsuario(new Usuario(2, "yasmim", "123456", "Yasmim Souza"
 
 //Rotas das empresas
 app.get("/empresa",(req,res)=>{
-    console.log(empresaService.empresas)
-    res.status(200).send(empresaService.empresas)
+    const empresas = empresaService.empresas.map((empresa) => {return {...empresa}})
+    
+    for (const empresa of empresas){
+        empresa.perfisEmpresa = perfilService.perfis
+        .filter( perfil => perfil.id_empresa == empresa.id )
+        .map( (perfil) => {
+            const usuario = usuariosService.buscarUsuario(perfil.id_usuario)
+            return {...perfil, usuario }
+        })
+    }
+
+    res.status(200).send(empresas)
 })
 
 
@@ -38,15 +57,16 @@ app.get("/empresa/:id",(req,res)=>{
     const {id} = req.params
 
     const empresa = empresaService.buscarEmpresa(id)
-    if (empresa == null)
+    if (empresa == null){
         res.status(400).send(erro_mensagem['erro.empresa.naoencontrada'])
-    
-    const cloneEmpresa = {...empresa}
+        return
+    }
+
     empresa.perfisEmpresa = perfilService.perfis
         .filter( perfil => perfil.id_empresa == empresa.id )
         .map( (perfil) => {
             const usuario = usuariosService.buscarUsuario(perfil.id_usuario)
-            return {...perfil, empresa: cloneEmpresa, usuario }
+            return {...perfil, usuario }
         })
     
     res.status(200).send(empresa)
@@ -128,7 +148,18 @@ app.delete("/empresa/:id",(req,res)=>{
 
 //Rotas dos Usuários
 app.get("/usuario",(req,res)=>{
-    res.status(200).send(usuariosService.usuarios)
+    const usuarios = usuariosService.usuarios.map((usuario) => {return {...usuario}})
+
+    for (const usuario of usuarios){
+        usuario.perfis = perfilService.perfis
+        .filter( perfil => perfil.id_usuario == usuario.id )
+        .map( (perfil) => {
+            const empresa = empresaService.buscarEmpresa(perfil.id_empresa)
+            return {...perfil, empresa }
+        })
+    }
+
+    res.status(200).send(usuarios)
 })
 
 app.get("/usuario/:id",(req,res)=>{
@@ -140,12 +171,11 @@ app.get("/usuario/:id",(req,res)=>{
         return
     }
 
-    const cloneUsuario = {...usuario}
     usuario.perfis = perfilService.perfis
         .filter( perfil => perfil.id_usuario == usuario.id )
         .map( (perfil) => {
             const empresa = empresaService.buscarEmpresa(perfil.id_empresa)
-            return {...perfil, empresa, usuario: cloneUsuario }
+            return {...perfil, empresa }
         })
 
     res.status(200).send(usuario)
@@ -162,7 +192,7 @@ app.post("/usuario",(req,res)=>{
         return
     }
 
-    if (!("nomeSocial" in novo_usuario) || ("nomeSocial" in novo_usuario == "")){
+    if ((novo_usuario.nomeSocial == "") || !("nomeSocial" in novo_usuario)){
         novo_usuario["nomeSocial"] = novo_usuario["nomeCompleto"]
     }
 
@@ -218,12 +248,13 @@ app.delete("/usuario/:id",(req,res)=>{
 
 // Rotas dos Perfis
 app.get("/perfil",(req,res)=>{
-    const perfis = [...perfilService.perfis] 
-
+    const perfis = perfilService.perfis.map((perfil) => {return {...perfil}})
+    
     for(const perfil of perfis){
         perfil.empresa = empresaService.buscarEmpresa(perfil.id_empresa)
         perfil.usuario = usuariosService.buscarUsuario(perfil.id_usuario)
     }
+
     res.status(200).send(perfis)
 })
 
@@ -235,12 +266,9 @@ app.get("/perfil/:id",(req,res)=>{
         res.status(400).send(erro_mensagem['erro.perfil.naoencontrado'])
         return
     }
-    
-    const perfis = [...perfilService.perfis] 
-    for(const perfil of perfis){
-        perfil.empresa = empresaService.buscarEmpresa(perfil.id_empresa)
-        perfil.usuario = usuariosService.buscarUsuario(perfil.id_usuario)
-    }
+
+    perfil.empresa = empresaService.buscarEmpresa(perfil.id_empresa)
+    perfil.usuario = usuariosService.buscarUsuario(perfil.id_usuario)
 
     res.status(200).send(perfil)
 })
