@@ -29,9 +29,28 @@ module.exports = class PerfilService {
         this.perfis.push(perfil)
     }
 
-    alterarPerfil(indice, perfil, edit_perfil){
-        perfil.nome = edit_perfil.nome
-        this.perfis[indice] = perfil
+    alterarPerfil(index, perfilEditado, perfil){
+        perfil.nome = perfilEditado.nome || perfil.nome
+        perfil.id_usuario = perfilEditado.id_usuario || perfil.id_usuario
+        perfil.id_empresa = perfilEditado.id_empresa || perfil.id_empresa
+
+        this.perfis[index] = perfil
+    }
+
+    alterarPerfilErroUsuario(index, backup, perfil){
+        perfil.nome = perfil.nome
+        perfil.id_usuario = backup.id_usuario
+        perfil.id_empresa = perfil.id_empresa
+
+        this.perfis[index] = perfil
+    }
+
+    alterarPerfilErroEmpresa(index, backup, perfil){
+        perfil.nome = perfil.nome
+        perfil.id_usuario = perfil.id_usuario
+        perfil.id_empresa = backup.id_empresa
+
+        this.perfis[index] = perfil
     }
     
     removerPerfil(id){
